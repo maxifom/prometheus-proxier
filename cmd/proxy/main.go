@@ -1,34 +1,12 @@
 package main
 
 import (
-	"encoding/base64"
 	"log"
 	"net/http"
 	"os"
-	"strings"
-
-	"prometheus-proxier/internal/ascii"
 
 	"github.com/elazarl/goproxy"
 )
-
-func parseBasicAuth(auth string) (username, password string, ok bool) {
-	const prefix = "Basic "
-	// Case insensitive prefix match. See Issue 22736.
-	if len(auth) < len(prefix) || !ascii.EqualFold(auth[:len(prefix)], prefix) {
-		return
-	}
-	c, err := base64.StdEncoding.DecodeString(auth[len(prefix):])
-	if err != nil {
-		return
-	}
-	cs := string(c)
-	s := strings.IndexByte(cs, ':')
-	if s < 0 {
-		return
-	}
-	return cs[:s], cs[s+1:], true
-}
 
 func main() {
 	baUser := os.Getenv("BASIC_USER")
@@ -49,6 +27,7 @@ func main() {
 			ctx.Logf("invalid path %s", r.URL.Path)
 			return r, goproxy.NewResponse(r, "", 500, "")
 		}
+		r.BasicAuth()
 		h := r.Header.Get("Proxy-Authorization")
 		user, password, _ := parseBasicAuth(h)
 		if user == baUser && password == baPassword {
